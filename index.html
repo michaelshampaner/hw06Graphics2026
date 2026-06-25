@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>HW6 - Interactive Bowling Game</title>
+  <style>
+    /* ===== Reset & Base ===== */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { margin: 0; overflow: hidden; background: #1a1a1a; font-family: 'Segoe UI', Arial, sans-serif; }
+
+    /* ===== Canvas ===== */
+    #webgl-canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    /* ===== UI Overlay Container ===== */
+    #ui-overlay {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    /* ===== Scorecard Panel (top) ===== */
+    #scorecard-container {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(10, 10, 20, 0.82);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 8px;
+      padding: 10px 18px;
+      pointer-events: auto;
+      min-width: 640px;
+    }
+
+    #scorecard-container h3 {
+      color: #f0c040;
+      font-size: 12px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      text-align: center;
+    }
+
+    #scorecard-table {
+      border-collapse: collapse;
+      width: 100%;
+    }
+
+    #scorecard-table th,
+    #scorecard-table td {
+      border: 1px solid rgba(255,255,255,0.2);
+      color: #fff;
+      font-size: 11px;
+      text-align: center;
+      padding: 4px 6px;
+      min-width: 48px;
+    }
+
+    #scorecard-table th {
+      background: rgba(255,255,255,0.08);
+      color: #aaa;
+      font-weight: normal;
+      letter-spacing: 1px;
+    }
+
+    .ball-score {
+      color: #f0c040;
+      font-size: 10px;
+      min-height: 14px;
+    }
+
+    .frame-total {
+      font-size: 12px;
+      font-weight: bold;
+      min-height: 16px;
+    }
+
+    /* ===== Controls Panel (bottom-left) ===== */
+    #controls-container {
+      position: absolute;
+      bottom: 18px;
+      left: 18px;
+      background: rgba(10, 10, 20, 0.82);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 8px;
+      padding: 12px 16px;
+      pointer-events: auto;
+    }
+
+    #controls-container h3 {
+      color: #f0c040;
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .control-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+
+    .key-badge {
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 4px;
+      color: #fff;
+      font-size: 11px;
+      font-weight: bold;
+      padding: 1px 7px;
+      min-width: 28px;
+      text-align: center;
+      letter-spacing: 0.5px;
+    }
+
+    .control-desc {
+      color: #ccc;
+      font-size: 11px;
+    }
+
+    /* ===== Power Meter (bottom-center) ===== */
+    #power-meter-container {
+      position: absolute;
+      bottom: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(10, 10, 20, 0.82);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 8px;
+      padding: 10px 16px;
+      pointer-events: none;
+      text-align: center;
+      min-width: 260px;
+    }
+
+    #power-meter-container h3 {
+      color: #f0c040;
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    #power-bar-track {
+      position: relative;
+      width: 240px;
+      height: 14px;
+      background: rgba(255,255,255,0.1);
+      border: 1px solid rgba(255,255,255,0.25);
+      border-radius: 7px;
+      overflow: hidden;
+    }
+
+    #power-fill {
+      position: absolute;
+      top: 0; left: 0; bottom: 0;
+      width: 0%;
+      background: linear-gradient(90deg, #4af 0%, #f0c040 65%, #e74c3c 100%);
+      transition: width 0.03s linear;
+    }
+
+    #phase-label {
+      color: #fff;
+      font-size: 12px;
+      margin-top: 8px;
+      font-weight: bold;
+      letter-spacing: 0.5px;
+    }
+
+    #curve-label {
+      color: #888;
+      font-size: 10px;
+      margin-top: 3px;
+    }
+
+    /* ===== Info Panel (bottom-right) ===== */
+    #info-container {
+      position: absolute;
+      bottom: 18px;
+      right: 18px;
+      background: rgba(10, 10, 20, 0.82);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 8px;
+      padding: 10px 14px;
+      pointer-events: none;
+      text-align: right;
+    }
+
+    #info-container .info-line {
+      color: #888;
+      font-size: 11px;
+      margin-bottom: 2px;
+    }
+
+    #info-container .info-line span {
+      color: #f0c040;
+    }
+
+    /* ===== Camera Status Badge ===== */
+    #camera-status {
+      position: absolute;
+      top: 10px;
+      right: 14px;
+      background: rgba(10, 10, 20, 0.82);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 6px;
+      color: #aaa;
+      font-size: 11px;
+      padding: 5px 10px;
+      pointer-events: none;
+      letter-spacing: 1px;
+    }
+
+    #camera-status.active {
+      border-color: #4af;
+      color: #4af;
+    }
+
+    /* ===== Game Over Banner ===== */
+    #game-over-banner {
+      display: none;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(10, 10, 20, 0.92);
+      border: 2px solid #f0c040;
+      border-radius: 10px;
+      padding: 24px 40px;
+      text-align: center;
+      pointer-events: none;
+    }
+
+    #game-over-banner h2 {
+      color: #f0c040;
+      font-size: 26px;
+      letter-spacing: 3px;
+      margin-bottom: 8px;
+    }
+
+    #game-over-banner p {
+      color: #ccc;
+      font-size: 13px;
+    }
+  </style>
+  <script src='https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js'></script>
+</head>
+<body>
+  <canvas id="webgl-canvas"></canvas>
+
+  <!-- UI Overlay -->
+  <div id="ui-overlay">
+
+    <!-- Bowling Scorecard (10-frame format) -->
+    <div id="scorecard-container">
+      <h3>🎳 Scorecard</h3>
+      <table id="scorecard-table">
+        <thead>
+          <tr id="frame-header-row">
+            <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th>
+            <th>6</th><th>7</th><th>8</th><th>9</th>
+            <th>10</th>
+            <th style="background:rgba(240,192,64,0.1); color:#f0c040;">Total</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr id="ball-scores-row">
+            <td><div class="ball-score" id="b1-1"></div><div class="ball-score" id="b1-2"></div></td>
+            <td><div class="ball-score" id="b2-1"></div><div class="ball-score" id="b2-2"></div></td>
+            <td><div class="ball-score" id="b3-1"></div><div class="ball-score" id="b3-2"></div></td>
+            <td><div class="ball-score" id="b4-1"></div><div class="ball-score" id="b4-2"></div></td>
+            <td><div class="ball-score" id="b5-1"></div><div class="ball-score" id="b5-2"></div></td>
+            <td><div class="ball-score" id="b6-1"></div><div class="ball-score" id="b6-2"></div></td>
+            <td><div class="ball-score" id="b7-1"></div><div class="ball-score" id="b7-2"></div></td>
+            <td><div class="ball-score" id="b8-1"></div><div class="ball-score" id="b8-2"></div></td>
+            <td><div class="ball-score" id="b9-1"></div><div class="ball-score" id="b9-2"></div></td>
+            <td><div class="ball-score" id="b10-1"></div><div class="ball-score" id="b10-2"></div><div class="ball-score" id="b10-3"></div></td>
+            <td><div class="frame-total" id="grand-total">—</div></td>
+          </tr>
+          <tr id="frame-totals-row">
+            <td><div class="frame-total" id="ft1"></div></td>
+            <td><div class="frame-total" id="ft2"></div></td>
+            <td><div class="frame-total" id="ft3"></div></td>
+            <td><div class="frame-total" id="ft4"></div></td>
+            <td><div class="frame-total" id="ft5"></div></td>
+            <td><div class="frame-total" id="ft6"></div></td>
+            <td><div class="frame-total" id="ft7"></div></td>
+            <td><div class="frame-total" id="ft8"></div></td>
+            <td><div class="frame-total" id="ft9"></div></td>
+            <td><div class="frame-total" id="ft10"></div></td>
+            <td></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Controls Instructions -->
+    <div id="controls-container">
+      <h3>🎮 Controls</h3>
+      <div class="control-row">
+        <span class="key-badge">◄ ►</span>
+        <span class="control-desc">Aim ball along foul line</span>
+      </div>
+      <div class="control-row">
+        <span class="key-badge">▲ ▼</span>
+        <span class="control-desc">Adjust spin / curve</span>
+      </div>
+      <div class="control-row">
+        <span class="key-badge">Space</span>
+        <span class="control-desc">Start power meter / lock & release</span>
+      </div>
+      <div class="control-row">
+        <span class="key-badge">R</span>
+        <span class="control-desc">Reset pins / new game</span>
+      </div>
+      <div class="control-row">
+        <span class="key-badge">O</span>
+        <span class="control-desc">Toggle orbit camera</span>
+      </div>
+      <div class="control-row">
+        <span class="key-badge">Mouse</span>
+        <span class="control-desc">Rotate / zoom (orbit mode)</span>
+      </div>
+    </div>
+
+    <!-- Power Meter -->
+    <div id="power-meter-container">
+      <h3>Power</h3>
+      <div id="power-bar-track">
+        <div id="power-fill"></div>
+      </div>
+      <div id="phase-label">AIMING — pick your spot</div>
+      <div id="curve-label">Spin: 0.00</div>
+    </div>
+
+    <!-- Orbit Status -->
+    <div id="camera-status">ORBIT: ON</div>
+
+    <!-- Info -->
+    <div id="info-container">
+      <div class="info-line">Pins standing: <span id="pins-standing">10</span></div>
+      <div class="info-line">Frame: <span id="current-frame">1</span> / 10</div>
+    </div>
+
+    <!-- Game Over Banner -->
+    <div id="game-over-banner">
+      <h2>GAME OVER</h2>
+      <p>Press <strong>R</strong> to start a new game</p>
+    </div>
+
+  </div>
+
+  <script type="module" src="./src/hw6.js"></script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "name": "hw06-bowling-game",
+  "version": "1.0.0",
+  "description": "Computer Graphics Exercise 6 - Interactive Bowling Game with WebGL / Three.js",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "keywords": ["webgl", "three.js", "bowling", "computer-graphics"],
+  "license": "MIT"
+}
